@@ -46,8 +46,9 @@ async def set_webhook():
 
 async def webhook_handler(request):
     update_data = await request.json()
-    update = Update.de_json(update_data, bot_context.bot)
-    await bot_context.update_queue.put(update)
+    application = request.app["application"]  # Retrieve the Application instance
+    update = Update.de_json(update_data, application.bot)
+    await application.update_queue.put(update)
     return web.Response(text="OK")
 
 def main() -> None:
@@ -63,6 +64,7 @@ def main() -> None:
 
     # Aiohttp app setup for Render
     aiohttp_app = web.Application()
+    aiohttp_app["application"] = app  # Store the Application instance in aiohttp app
     aiohttp_app.router.add_post(f"/webhook/{TELEGRAM_API}", webhook_handler)
 
     # Run aiohttp server
