@@ -80,7 +80,9 @@ def main() -> None:
     # Set the webhook asynchronously
     import asyncio
     asyncio.run(set_webhook())
-
+    # Initialize and start the bot application
+    asyncio.run(app.initialize())
+    asyncio.run(app.start())
     # Aiohttp app setup for Render
     aiohttp_app = web.Application()
     aiohttp_app["application"] = app  # Store the Application instance in aiohttp app
