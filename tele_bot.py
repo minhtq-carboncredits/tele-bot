@@ -47,12 +47,14 @@ async def query_backend(user_message: str) -> str:
 
 # Webhook handler
 async def webhook_handler(request):
-    update = Update.de_json(await request.json(), context.bot)
-    await app.process_update(update)
-    return web.Response()
+    # Extract update from the incoming POST request
+    update = Update.de_json(await request.json(), app.bot)  # Use `app.bot` instead of undefined `context.bot`
+    await app.process_update(update)  # Pass the update to the application for processing
+    return web.Response(text="OK")  # Return OK to Telegram
 
 # Main entry point
 def main() -> None:
+    global app
     set_webhook()
 
     # Initialize Telegram bot application
