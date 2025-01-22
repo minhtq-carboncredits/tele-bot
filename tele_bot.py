@@ -31,7 +31,7 @@ async def query_backend(user_message):
             response_data = await resp.json()
             return response_data["response"]
 
-async def set_webhook(application):
+async def set_webhook():
     url = f"{WEBHOOK_URL}/webhook/{TELEGRAM_API}"
     async with aiohttp.ClientSession() as session:
         response = await session.post(
@@ -51,13 +51,15 @@ async def webhook_handler(request):
     return web.Response(text="OK")
 
 def main() -> None:
+    # Create the application
     app = ApplicationBuilder().token(TELEGRAM_API).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Set up the webhook
-    app.on_startup.append(set_webhook)
+    # Set the webhook asynchronously
+    import asyncio
+    asyncio.run(set_webhook())
 
     # Aiohttp app setup for Render
     aiohttp_app = web.Application()
