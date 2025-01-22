@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from telegram.constants import ParseMode
 from pipeline.utils import convert_bold_to_html
 from aiohttp import web
+import requests
 
 load_dotenv()
 TELEGRAM_API = os.getenv("TELEGRAM_API_KEY")
