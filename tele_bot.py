@@ -1,73 +1,63 @@
-from aiohttp import web
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, WebhookHandler, filters
+import aiohttp
 import os
-import requests
 from dotenv import load_dotenv
-from pipeline.utils import convert_bold_to_html  # Replace with your utility path
+from telegram.constants import ParseMode
+from pipeline.utils import convert_bold_to_html
+from aiohttp import web
 
-# Load environment variables
 load_dotenv()
 TELEGRAM_API = os.getenv("TELEGRAM_API_KEY")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Example: https://yourapp.onrender.com/
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Set this to your Render app's public URL
 
-# Register webhook with Telegram
-def set_webhook():
-    response = requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_API}/setWebhook",
-        json={"url": f"{WEBHOOK_URL}/{TELEGRAM_API}"}
-    )
-    print(response.json())
-
-# Start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        convert_bold_to_html(f"Hello **{update.effective_user.first_name}**"), 
-        parse_mode="HTML"
+        convert_bold_to_html(f"Hello **{update.effective_user.first_name}**"), parse_mode=ParseMode.HTML
     )
 
-# Message handler
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_message = update.message.text
     response = await query_backend(user_message)
     await update.message.reply_text(
-        convert_bold_to_html(response), 
-        parse_mode="HTML"
+        convert_bold_to_html(response), parse_mode=ParseMode.HTML
     )
 
-# Query backend for message processing
-async def query_backend(user_message: str) -> str:
+async def query_backend(user_message):
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            "https://carboncredits-tccv-edu-chatbot.hf.space/query", 
-            json={"user_message": user_message}
+            "https://carboncredits-tccv-edu-chatbot.hf.space/query", json={"user_message": user_message}
         ) as resp:
             response_data = await resp.json()
-            return response_data.get("response", "Error: No response from backend")
+            return response_data["response"]
 
-# Webhook handler
-async def webhook_handler(request):
-    # Extract update from the incoming POST request
-    update = Update.de_json(await request.json(), app.bot)  # Use `app.bot` instead of undefined `context.bot`
-    await app.process_update(update)  # Pass the update to the application for processing
-    return web.Response(text="OK")  # Return OK to Telegram
+async def set_webhook(app):
+    await app.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
-# Main entry point
+async def webhook_handler(request: web.Request):
+    bot = request.app["bot"]
+    update = await bot.update_queue.put(await request.json())
+    return web.Response()
+
 def main() -> None:
-    global app
-    set_webhook()
-
-    # Initialize Telegram bot application
+    # Initialize the bot and application
     app = ApplicationBuilder().token(TELEGRAM_API).build()
+
+    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Set up aiohttp web server
-    web_app = web.Application()
-    web_app.router.add_post(f"/{TELEGRAM_API}", webhook_handler)
+    # Add webhook settings
+    app.on_startup.append(set_webhook)
+    app.web_app.router.add_post("/webhook", webhook_handler)
+    app.web_app["bot"] = app.bot
 
-    # Run the web server
-    web.run_app(web_app, host="0.0.0.0", port=8443)
+    # Run the application
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.getenv("PORT", 8443)),
+        webhook_url=f"{WEBHOOK_URL}/webhook",
+    )
 
 if __name__ == "__main__":
     main()
