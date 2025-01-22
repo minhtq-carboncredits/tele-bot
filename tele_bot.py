@@ -60,10 +60,13 @@ async def set_webhook():
 
 async def webhook_handler(request):
     update_data = await request.json()
-    application = request.app["application"]  # Retrieve the Application instance
+    print(f"Received update: {update_data}")  # Debugging
+    application = request.app["application"]
     update = Update.de_json(update_data, application.bot)
     await application.update_queue.put(update)
+    print("Update added to the queue")  # Debugging
     return web.Response(text="OK")
+
 
 def main() -> None:
     # Create the application
