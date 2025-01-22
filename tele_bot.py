@@ -11,6 +11,19 @@ load_dotenv()
 TELEGRAM_API = os.getenv("TELEGRAM_API_KEY")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Set this to your Render app's URL, e.g., https://your-app.onrender.com
 
+def check_internet():
+    try:
+        response = requests.get("https://www.google.com", timeout=5)
+        if response.status_code == 200:
+            print("Internet connection is available.")
+            return True
+        else:
+            print(f"Internet check failed with status code: {response.status_code}")
+            return False
+    except requests.ConnectionError as e:
+        print(f"No internet connection: {e}")
+        return False
+        
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         convert_bold_to_html(f"Hello **{update.effective_user.first_name}**"),
@@ -40,7 +53,7 @@ async def set_webhook():
         )
         data = await response.json()
         if data.get("ok"):
-            print(f"Webhook set successfully: {url}")
+            print(f"Webhook set successfully: {url} with {data}")
         else:
             print(f"Failed to set webhook: {data}")
 
@@ -54,7 +67,7 @@ async def webhook_handler(request):
 def main() -> None:
     # Create the application
     app = ApplicationBuilder().token(TELEGRAM_API).build()
-
+    check_internet()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
