@@ -32,6 +32,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    print(f"handle_message reached with {update.message.text}")
     user_message = update.message.text
     response = await query_backend(user_message)
     await update.message.reply_text(convert_bold_to_html(response), parse_mode=ParseMode.HTML)
@@ -73,7 +74,8 @@ def main() -> None:
     app = ApplicationBuilder().token(TELEGRAM_API).build()
     check_internet()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    # app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.ALL, handle_message))
 
     # Set the webhook asynchronously
     import asyncio
